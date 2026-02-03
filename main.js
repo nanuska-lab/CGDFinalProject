@@ -78,7 +78,7 @@ ground.receiveShadow = true;
 world.add(ground);
 
 const road = new THREE.Mesh(
-  new THREE.PlaneGeometry(60, 12),
+  new THREE.PlaneGeometry(100, 12),
   new THREE.MeshStandardMaterial({ map: roadTexture, roughness: 0.95 })
 );
 road.rotation.x = -Math.PI / 2;
@@ -87,20 +87,26 @@ road.receiveShadow = true;
 world.add(road);
 
 const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x3b4452, roughness: 0.9 });
-const sidewalk1 = new THREE.Mesh(new THREE.BoxGeometry(60, 0.4, 3), sidewalkMat);
-sidewalk1.position.set(0, 0.2, 7.5);
+const sidewalk1 = new THREE.Mesh(new THREE.BoxGeometry(100, 0.4, 8), sidewalkMat);
+sidewalk1.position.set(0, 0.2, 10);
 sidewalk1.receiveShadow = true;
 
 const sidewalk2 = sidewalk1.clone();
-sidewalk2.position.set(0, 0.2, -7.5);
+sidewalk2.position.set(0, 0.2, -10);
 world.add(sidewalk1, sidewalk2);
 
-// road dashed lines
+// road dashed lines (cover full road length)
+const ROAD_LENGTH = 100; // must match PlaneGeometry(100, 12)
+const DASH_LENGTH = 3;
+const DASH_GAP = 3;      // distance between dash starts (increase/decrease)
+const DASH_STEP = DASH_LENGTH + DASH_GAP;
+
 const lineMat = new THREE.MeshStandardMaterial({ color: 0xe9e9e9, roughness: 0.7 });
-for (let i = -26; i <= 26; i += 6) {
-  const line = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.25), lineMat);
+
+for (let x = -ROAD_LENGTH / 2 + DASH_LENGTH / 2; x <= ROAD_LENGTH / 2 - DASH_LENGTH / 2; x += DASH_STEP) {
+  const line = new THREE.Mesh(new THREE.PlaneGeometry(DASH_LENGTH, 0.25), lineMat);
   line.rotation.x = -Math.PI / 2;
-  line.position.set(i, 0.03, 0);
+  line.position.set(x, 0.05, 0);
   world.add(line);
 }
 
@@ -115,13 +121,13 @@ function makeBuilding(x, z, w, h, d) {
   return mesh;
 }
 
-world.add(makeBuilding(-18, 14, 10, 8, 8));
+world.add(makeBuilding(-18, 14, 10, 8, 8)); //ovaja zgrada treba da bide hamam
 // world.add(makeBuilding(-2, 14, 9, 10, 7));
 // world.add(makeBuilding(14, 14, 12, 7, 8));
 
-world.add(makeBuilding(-18, -14, 12, 7, 8));
-world.add(makeBuilding(-2, -14, 9, 9, 7));
-world.add(makeBuilding(14, -14, 10, 11, 8));
+world.add(makeBuilding(40, -16, 12, 7, 8));
+world.add(makeBuilding(20, -25, 30, 9, 7));
+// world.add(makeBuilding(14, -14, 10, 11, 8));
 
 /* ---------------- Streetlights ---------------- */
 function makeStreetLight(x, z) {
@@ -158,10 +164,19 @@ function makeStreetLight(x, z) {
   return g;
 }
 
-for (let i = -24; i <= 24; i += 8) {
-  world.add(makeStreetLight(i, 5.8));
-  world.add(makeStreetLight(i, -5.8));
+const LAMP_SPACING = 8;
+const SIDEWALK_LENGTH = 100;
+
+// sidewalks are centered at z = ±10
+const SIDEWALK_Z = 6;
+
+const EDGE_OFFSET = 1.2; // try 0.0, 0.8, 1.2 etc.
+
+for (let x = -SIDEWALK_LENGTH / 2 + 2; x <= SIDEWALK_LENGTH / 2 - 2; x += LAMP_SPACING) {
+  world.add(makeStreetLight(x,  SIDEWALK_Z + EDGE_OFFSET));
+  world.add(makeStreetLight(x, -SIDEWALK_Z - EDGE_OFFSET));
 }
+
 
 /* ---------------- Trees (Park atmosphere) ---------------- */
 function makeTree(x, z, height = 6) {
