@@ -452,7 +452,7 @@ gltfLoader.load(
     box.getSize(size);
 
     // Target height larger than tallest building (11 units)
-    const targetHeight = 16;  // make it prominent and larger than buildings
+    const targetHeight = 26;  // make it prominent and larger than buildings
     const sy = Math.max(size.y, 0.0001);
     const scale = targetHeight / sy;
     landmark.scale.setScalar(scale);
@@ -464,7 +464,7 @@ gltfLoader.load(
     const minY = box2.min.y;
 
     // Place it at position (70, 45) and rotate 90 degrees to the left
-    landmark.position.set(10, -minY, 10);
+    landmark.position.set(-7, -minY, 1);
     landmark.rotation.y = Math.PI / 1.25;  // 90 degrees rotation to the left (stairs to the side)
 
     world.add(landmark);
@@ -577,4 +577,4 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-animate();
+animate(); 
