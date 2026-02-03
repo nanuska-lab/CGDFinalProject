@@ -1,0 +1,14 @@
+{
+  "name": "tetovo-street",
+  "version": "1.0.0",
+  "description": "3D interactive Tetovo street visualization using Three.js",
+  "main": "main.js",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "author": "Tijana Avramoska & Nikolina Ilievska",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.180.0"
+  }
+}

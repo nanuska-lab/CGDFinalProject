@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tetovo 3D Street</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body { margin: 0; overflow: hidden; }
+      canvas { display: block; }
+      /* simple info panel */
+      #panel {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 320px;
+        background: rgba(10, 12, 16, 0.9);
+        color: white;
+        padding: 12px;
+        border-radius: 12px;
+        font-family: Arial, sans-serif;
+        display: none;
+      }
+      #panel h2 { margin: 0 0 6px; font-size: 18px; }
+      #panel p { margin: 0; line-height: 1.4; opacity: 0.95; }
+      #closeBtn {
+        margin-top: 10px;
+        padding: 6px 10px;
+        border: 0;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="panel">
+      <h2>Šarena Džamija</h2>
+      <p id="panelText"></p>
+      <button id="closeBtn">Close</button>
+    </div>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
