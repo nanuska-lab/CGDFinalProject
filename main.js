@@ -13,8 +13,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   400
 );
-camera.position.set(16, 12, 22);
-camera.lookAt(0, 2, 0);
+camera.position.set(20, 55, 35);  // Higher up, more top-down angle
+camera.lookAt(20, 0, 24);  // Looking at the landmark/park area
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -25,7 +25,7 @@ document.body.appendChild(renderer.domElement);
 /* ---------------- Controls ---------------- */
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.target.set(0, 2, 0);
+controls.target.set(20, 0, 24);  // Focus on landmark area
 
 /* ---------------- Lights ---------------- */
 scene.add(new THREE.AmbientLight(0xffffff, 0.7));  // ☀️ BRIGHT summer ambient
@@ -214,13 +214,13 @@ const parkTrees = [
   
   // Right side of park
   makeTree(30, 19, 6.5),
-  makeTree(32, 24, 7),
-  makeTree(30, 29, 6),
-  makeTree(28, 32, 7),
+  makeTree(34, 24, 7),
+  makeTree(32, 29, 6),
+  makeTree(28, 38, 7),
   
   // Back of park
   makeTree(17, 38, 6),
-  makeTree(20, 36, 6.5),
+  makeTree(10, 37, 6.5),
   makeTree(25, 34, 6),
   
   // Front of park (near road)
@@ -326,15 +326,15 @@ function makeBench(x, z, rotationY = 0) {
 // Place benches around the park (centered at 20, 24)
 const benches = [
   // Benches facing the landmark (around the center)
-  makeBench(13, 24, Math.PI / 2),  // Left side, facing center
-  makeBench(27, 24, -Math.PI / 2), // Right side, facing center
-  makeBench(20, 17, 0),             // Front, facing landmark
-  makeBench(20, 31, Math.PI),       // Back, facing landmark
+  makeBench(18, 28, Math.PI / 2),  // Left side, facing center
+  makeBench(22, 40, -Math.PI / 2), // Right side, facing center
+  makeBench(15, 32, 0),             // Front, facing landmark
+  makeBench(30, 38, Math.PI),       // Back, facing landmark
   
   // Corner benches
   makeBench(12, 20, Math.PI / 4),   // Front-left corner
   makeBench(28, 20, -Math.PI / 4),  // Front-right corner
-  makeBench(12, 28, 3 * Math.PI / 4), // Back-left corner
+  makeBench(12, 35, 3 * Math.PI / 4), // Back-left corner
   makeBench(28, 28, -3 * Math.PI / 4), // Back-right corner
 ];
 
