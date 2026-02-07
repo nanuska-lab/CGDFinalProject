@@ -83,28 +83,29 @@ ground.receiveShadow = true;
 world.add(ground);
 
 /* ---------------- River (single, fixed) ---------------- */
+const waterTexture = safeLoadTexture("textures/water.jpg", { repeatX:1, repeatY: 15 });
+
 const riverMaterial = new THREE.MeshStandardMaterial({
-  color: 0x4a90c4,
-  roughness: 0.3,
-  metalness: 0.4,
+  color: 0x5a9fc4,
+  map: waterTexture,
   transparent: true,
-  opacity: 0.85,
+  opacity: 5,
 });
 
 const RIVER_LENGTH = 100;
 const RIVER_WIDTH = 9;
 
-// The river is a flat plane: length along X, width along Z after rotation.
+// The river now runs along Z-axis (parallel to park)
 const river = new THREE.Mesh(
-  new THREE.PlaneGeometry(RIVER_LENGTH, RIVER_WIDTH),
+  new THREE.PlaneGeometry(RIVER_WIDTH, RIVER_LENGTH),
   riverMaterial
 );
 river.rotation.x = -Math.PI / 2;
-river.position.set(-5, 0.01, 14.5);
+river.position.set(-4, 0.01, 7); 
 river.receiveShadow = true;
 
 // Optional tiny shrink so it never visually clips the banks
-river.scale.z = (RIVER_WIDTH - 0.2) / RIVER_WIDTH;
+river.scale.x = (RIVER_WIDTH - 0.2) / RIVER_WIDTH;
 
 world.add(river);
 
@@ -114,32 +115,31 @@ const bankMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.9,
 });
 
-const BANK_THICKNESS = 1.0; // thickness in Z
+const BANK_THICKNESS = 1.0; // thickness in X now
 const BANK_HEIGHT = 0.6;
-const bankOffsetZ = (RIVER_WIDTH / 2) + (BANK_THICKNESS / 2);
+const bankOffsetX = (RIVER_WIDTH / 2) + (BANK_THICKNESS / 2);
 
-// Top bank (+Z)
-const riverBankTop = new THREE.Mesh(
-  new THREE.BoxGeometry(RIVER_LENGTH, BANK_HEIGHT, BANK_THICKNESS),
+// Left bank (-X)
+const riverBankLeft = new THREE.Mesh(
+  new THREE.BoxGeometry(BANK_THICKNESS, BANK_HEIGHT, RIVER_LENGTH),
   bankMaterial
 );
-riverBankTop.position.set(
-  river.position.x,
+riverBankLeft.position.set(
+  river.position.x - bankOffsetX,
   BANK_HEIGHT / 2 - 0.1,
-  river.position.z + bankOffsetZ
+  river.position.z
 );
-riverBankTop.castShadow = true;
-riverBankTop.receiveShadow = true;
-world.add(riverBankTop);
+riverBankLeft.castShadow = true;
+riverBankLeft.receiveShadow = true;
+world.add(riverBankLeft);
 
-// Bottom bank (-Z)
-const riverBankBottom = riverBankTop.clone();
-riverBankBottom.position.z = river.position.z - bankOffsetZ;
-world.add(riverBankBottom);
+// Right bank (+X)
+const riverBankRight = riverBankLeft.clone();
+riverBankRight.position.x = river.position.x + bankOffsetX;
+world.add(riverBankRight);
 
 // Keep river animation data simple
 const riverData = { mesh: river, time: 0 };
-
 /* ---------------- Curved Bridge Road ---------------- */
 const roadSegments = 60;
 const roadCurveGeometry = new THREE.PlaneGeometry(100, 12, roadSegments, 1);
@@ -479,7 +479,7 @@ const parkGround = new THREE.Mesh(
   })
 );
 parkGround.rotation.x = -Math.PI / 2;
-parkGround.position.set(25, 0.01, 30);
+parkGround.position.set(26, 0.01, 30);
 parkGround.receiveShadow = true;
 world.add(parkGround);
 
@@ -653,6 +653,7 @@ window.addEventListener("resize", () => {
 
 /* ---------------- Animate ---------------- */
 const clock = new THREE.Clock();
+let riverTime = 0;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -672,12 +673,15 @@ function animate() {
     c.mesh.position.y = 0.5 + bridgeHeight; // 0.5 is the base road height
   });
 
-  // River "shimmer" animation
-  riverData.time += dt * 0.5;
-  const color1 = 0x4a90c4;
-  const color2 = 0x5298cc;
-  const currentColor = riverData.time % 2 < 1 ? color1 : color2;
-  riverData.mesh.material.color.setHex(currentColor);
+  // River water flowing animation with wave effect
+  riverTime += dt;
+  if (waterTexture) {
+    // Main flow direction
+    waterTexture.offset.y += 0.08 * dt; // Faster flow speed
+    
+    // Add wave-like motion by slightly varying the X offset
+    waterTexture.offset.x = Math.sin(riverTime * 0.5) * 0.015;
+  }
 
   controls.update();
   renderer.render(scene, camera);
