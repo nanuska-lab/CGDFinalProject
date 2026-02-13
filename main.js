@@ -24,7 +24,60 @@ document.body.appendChild(renderer.domElement);
 /* ---------------- Controls ---------------- */
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.dampingFactor = 0.05;
 controls.target.set(20, 0, 24);
+
+// Better zoom settings
+controls.minDistance = 10;
+controls.maxDistance = 150;
+
+// Better pan settings
+controls.panSpeed = 1.0;
+controls.screenSpacePanning = true;
+
+// Better rotation settings
+controls.rotateSpeed = 0.5;
+controls.minPolarAngle = 0; // Allow looking straight down
+controls.maxPolarAngle = Math.PI / 2 + 0.3; // Prevent going below ground
+
+// Keyboard movement
+const keyboard = {
+  w: false,
+  a: false,
+  s: false,
+  d: false,
+  q: false,
+  e: false,
+  shift: false,
+  space: false
+};
+
+window.addEventListener('keydown', (e) => {
+  const key = e.key.toLowerCase();
+  if (key === 'w') keyboard.w = true;
+  if (key === 'a') keyboard.a = true;
+  if (key === 's') keyboard.s = true;
+  if (key === 'd') keyboard.d = true;
+  if (key === 'q') keyboard.q = true;
+  if (key === 'e') keyboard.e = true;
+  if (e.key === 'Shift') keyboard.shift = true;
+  if (e.key === ' ') {
+    keyboard.space = true;
+    e.preventDefault();
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  const key = e.key.toLowerCase();
+  if (key === 'w') keyboard.w = false;
+  if (key === 'a') keyboard.a = false;
+  if (key === 's') keyboard.s = false;
+  if (key === 'd') keyboard.d = false;
+  if (key === 'q') keyboard.q = false;
+  if (key === 'e') keyboard.e = false;
+  if (e.key === 'Shift') keyboard.shift = false;
+  if (e.key === ' ') keyboard.space = false;
+});
 
 /* ---------------- Lights ---------------- */
 scene.add(new THREE.AmbientLight(0xffffff, 0.7));
@@ -306,20 +359,567 @@ pillarPositions.forEach((xPos) => {
   world.add(rightPillar);
 });
 
+/* ---------------- Bridge Railings/Fence ---------------- */
+const railingPostMaterial = new THREE.MeshStandardMaterial({
+  color: 0x4a4a4a,
+  roughness: 0.6,
+  metalness: 0.4
+});
+
+const railingBarMaterial = new THREE.MeshStandardMaterial({
+  color: 0x555555,
+  roughness: 0.5,
+  metalness: 0.5
+});
+
+const railingOrangeMaterial = new THREE.MeshStandardMaterial({
+  color: 0xcc4400,
+  roughness: 0.4,
+  metalness: 0.3
+});
+
+function createRailingSegment(x, z, rotationY = 0) {
+  const segment = new THREE.Group();
+  
+  const normalizedX = x / 50;
+  const bridgeHeight = 1.5 * (1 - normalizedX * normalizedX);
+  
+  // Vertical posts (concrete/metal)
+  const post1 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 1.2, 0.2),
+    railingPostMaterial
+  );
+  post1.position.set(0, 0.6, 0);
+  post1.castShadow = true;
+  segment.add(post1);
+  
+  const post2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 1.2, 0.2),
+    railingPostMaterial
+  );
+  post2.position.set(2, 0.6, 0);
+  post2.castShadow = true;
+  segment.add(post2);
+  
+  // Top horizontal rail
+  const topRail = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 0.15, 0.15),
+    railingPostMaterial
+  );
+  topRail.position.set(1, 1.15, 0);
+  topRail.castShadow = true;
+  segment.add(topRail);
+  
+  // Middle horizontal bars (metal)
+  const midBar1 = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 0.08, 0.08),
+    railingBarMaterial
+  );
+  midBar1.position.set(1, 0.75, 0);
+  segment.add(midBar1);
+  
+  const midBar2 = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 0.08, 0.08),
+    railingBarMaterial
+  );
+  midBar2.position.set(1, 0.45, 0);
+  segment.add(midBar2);
+  
+  // Orange safety panel (like in the photo)
+  const orangePanel = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.5, 0.05),
+    railingOrangeMaterial
+  );
+  orangePanel.position.set(1, 0.6, 0.05);
+  orangePanel.castShadow = true;
+  segment.add(orangePanel);
+  
+  segment.position.set(x, 0.5 + bridgeHeight, z);
+  segment.rotation.y = rotationY;
+  
+  return segment;
+}
+
+// Add railings along both sides of the bridge/road
+const railingSpacing = 2.2;
+const roadLength = 100;
+
+for (let x = -roadLength / 2; x <= roadLength / 2; x += railingSpacing) {
+  // Skip railings where buildings are located
+  const isBrickBuildingArea = (x >= 33 && x <= 47 && Math.abs(-14 - (-14)) < 1); // Right side, brick building area
+  const isKipperStoreArea = (x >= 3 && x <= 33 && Math.abs(-14 - (-16)) < 3); // Right side, Kipper store area
+  
+  // Left side railing (outer edge of left sidewalk)
+  const leftRailing = createRailingSegment(x, 14);
+  world.add(leftRailing);
+  
+  // Right side railing (outer edge of right sidewalk) - skip where buildings are
+  if (!isBrickBuildingArea && !isKipperStoreArea) {
+    const rightRailing = createRailingSegment(x, -14, Math.PI);
+    world.add(rightRailing);
+  }
+}
+
 /* ---------------- Buildings ---------------- */
 const brickMaterial = new THREE.MeshStandardMaterial({ map: brickTexture, roughness: 0.95 });
 const facadeMaterial = new THREE.MeshStandardMaterial({ map: facadeTexture, roughness: 0.9,});
 
+// Kipper Store Materials
+const kipperBlueMaterial = new THREE.MeshStandardMaterial({ 
+  color: 0x5da7d9,
+  roughness: 0.6,
+  metalness: 0.15
+});
+
+const kipperRedMaterial = new THREE.MeshStandardMaterial({ 
+  color: 0xe63946,
+  roughness: 0.5,
+  emissive: 0x330000,
+  emissiveIntensity: 0.1
+});
+
+const kipperWhiteMaterial = new THREE.MeshStandardMaterial({ 
+  color: 0xf5f5f5,
+  roughness: 0.4
+});
+
+const glassMaterial = new THREE.MeshStandardMaterial({ 
+  color: 0x1a2a3a,
+  transparent: true,
+  opacity: 0.5,
+  roughness: 0.05,
+  metalness: 0.9
+});
+
+const frameMaterial = new THREE.MeshStandardMaterial({ 
+  color: 0x2a2a2a,
+  roughness: 0.3,
+  metalness: 0.7
+});
+
 function makeBuilding(x, z, w, h, d, material = brickMaterial) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  mesh.position.set(x, h / 2, z);
+  const building = new THREE.Group();
+  
+  // Main structure - darker brick material for Balkan style
+  const balkanBrickMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6b4c3b,
+    map: brickTexture,
+    roughness: 0.95
+  });
+  
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), balkanBrickMaterial);
+  mesh.position.set(0, h / 2, 0);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  return mesh;
+  building.add(mesh);
+  
+  // Storefront opening (no glass, just open)
+  const openingMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1a1a1a,
+    roughness: 0.9
+  });
+  
+  const storefront = new THREE.Mesh(
+    new THREE.BoxGeometry(w * 0.7, h * 0.5, 0.3),
+    openingMaterial
+  );
+  storefront.position.set(0, h * 0.3, d/2 + 0.1);
+  building.add(storefront);
+  
+  // White frame around storefront
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: 0xeeeeee,
+    roughness: 0.7
+  });
+  
+  // Top frame
+  const topFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(w * 0.75, 0.3, 0.2),
+    frameMaterial
+  );
+  topFrame.position.set(0, h * 0.55, d/2 + 0.2);
+  building.add(topFrame);
+  
+  // Side frames
+  const leftFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, h * 0.55, 0.2),
+    frameMaterial
+  );
+  leftFrame.position.set(-w * 0.35, h * 0.3, d/2 + 0.2);
+  building.add(leftFrame);
+  
+  const rightFrame = leftFrame.clone();
+  rightFrame.position.set(w * 0.35, h * 0.3, d/2 + 0.2);
+  building.add(rightFrame);
+  
+  // Awning/overhang
+  const awningMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b4513,
+    roughness: 0.8
+  });
+  
+  const awning = new THREE.Mesh(
+    new THREE.BoxGeometry(w + 1, 0.2, 2.5),
+    awningMaterial
+  );
+  awning.position.set(0, h - 0.1, d/2 + 1);
+  awning.castShadow = true;
+  building.add(awning);
+  
+  // Sign on top with text "PULA 260 DEN"
+  function createSignTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    
+    // Red background
+    ctx.fillStyle = '#cc3333';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // White text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 70px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PULA 260 DEN', canvas.width / 2, canvas.height / 2);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+  }
+  
+  const signTexture = createSignTexture();
+  const signMaterial = new THREE.MeshStandardMaterial({
+    map: signTexture,
+    roughness: 0.6
+  });
+  
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(w * 0.8, 1, 0.2),
+    signMaterial
+  );
+  sign.position.set(0, h + 0.5, d/2 - 0.5);
+  sign.castShadow = true;
+  building.add(sign);
+  
+  // Add some interior lighting
+  const interiorLight = new THREE.PointLight(0xffaa55, 1.2, 15);
+  interiorLight.position.set(0, h * 0.4, d/2 - 1);
+  building.add(interiorLight);
+  
+  building.position.set(x, 0, z);
+  return building;
 }
 
-world.add(makeBuilding(40, -18, 12, 7, 8));
-world.add(makeBuilding(18, -20, 30, 9, 7, facadeMaterial));
+// Create canvas texture for Kipper text
+function createKipperSignTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  
+  // Red background
+  ctx.fillStyle = '#e63946';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // White text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 90px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('kipper', canvas.width / 2, canvas.height / 2);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
+// Create canvas texture for Milk text
+function createMilkTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  
+  // Light blue gradient background
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, '#87CEEB');
+  gradient.addColorStop(1, '#5da7d9');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // White text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 120px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Milk', canvas.width / 2, canvas.height / 2);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
+// Make Kipper Store
+function makeKipperStore(x, z) {
+  const store = new THREE.Group();
+
+  // Main building structure (blue upper part)
+  const upperStructure = new THREE.Mesh(
+    new THREE.BoxGeometry(30, 5.5, 7),
+    kipperBlueMaterial
+  );
+  upperStructure.position.set(0, 6.75, 0);
+  upperStructure.castShadow = true;
+  upperStructure.receiveShadow = true;
+  store.add(upperStructure);
+
+  // Lower storefront - now with more realistic appearance
+  const storefront = new THREE.Mesh(
+    new THREE.BoxGeometry(30, 4, 7),
+    new THREE.MeshStandardMaterial({
+      color: 0xd0d0d0,
+      roughness: 0.3,
+      metalness: 0.2
+    })
+  );
+  storefront.position.set(0, 2, 0);
+  storefront.castShadow = true;
+  storefront.receiveShadow = true;
+  store.add(storefront);
+
+  // Improved glass panels with better transparency and reflection
+  const glassWidth = 7.5;
+  const glassHeight = 3.4;
+  const glassY = 2;
+  const glassZ = 3.6;
+
+  const improvedGlassMaterial = new THREE.MeshStandardMaterial({
+    color: 0x88ccff,
+    transparent: true,
+    opacity: 0.15,
+    roughness: 0.05,
+    metalness: 0.9,
+    envMapIntensity: 1.0
+  });
+
+  // Left glass panel
+  const glassPanel1 = new THREE.Mesh(
+    new THREE.BoxGeometry(glassWidth, glassHeight, 0.1),
+    improvedGlassMaterial
+  );
+  glassPanel1.position.set(-10, glassY, glassZ);
+  store.add(glassPanel1);
+
+  // Center glass panel
+  const glassPanel2 = new THREE.Mesh(
+    new THREE.BoxGeometry(glassWidth, glassHeight, 0.1),
+    improvedGlassMaterial
+  );
+  glassPanel2.position.set(0, glassY, glassZ);
+  store.add(glassPanel2);
+
+  // Right glass panel
+  const glassPanel3 = new THREE.Mesh(
+    new THREE.BoxGeometry(glassWidth, glassHeight, 0.1),
+    improvedGlassMaterial
+  );
+  glassPanel3.position.set(10, glassY, glassZ);
+  store.add(glassPanel3);
+
+  // Window frames (vertical dividers) - darker and more visible
+  const frameWidth = 0.35;
+  const frameHeight = glassHeight + 0.3;
+  const improvedFrameMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x1a1a1a,
+    roughness: 0.4,
+    metalness: 0.6
+  });
+
+  const frame1 = new THREE.Mesh(
+    new THREE.BoxGeometry(frameWidth, frameHeight, 0.25),
+    improvedFrameMaterial
+  );
+  frame1.position.set(-13.75, glassY, glassZ);
+  frame1.castShadow = true;
+  store.add(frame1);
+
+  const frame2 = frame1.clone();
+  frame2.position.set(-6.25, glassY, glassZ);
+  store.add(frame2);
+
+  const frame3 = frame1.clone();
+  frame3.position.set(-3.75, glassY, glassZ);
+  store.add(frame3);
+
+  const frame4 = frame1.clone();
+  frame4.position.set(3.75, glassY, glassZ);
+  store.add(frame4);
+
+  const frame5 = frame1.clone();
+  frame5.position.set(6.25, glassY, glassZ);
+  store.add(frame5);
+
+  const frame6 = frame1.clone();
+  frame6.position.set(13.75, glassY, glassZ);
+  store.add(frame6);
+
+  // Horizontal frames (top and bottom of windows)
+  const horizontalFrame1 = new THREE.Mesh(
+    new THREE.BoxGeometry(30.5, 0.3, 0.25),
+    improvedFrameMaterial
+  );
+  horizontalFrame1.position.set(0, glassY + glassHeight/2 + 0.15, glassZ);
+  horizontalFrame1.castShadow = true;
+  store.add(horizontalFrame1);
+
+  const horizontalFrame2 = horizontalFrame1.clone();
+  horizontalFrame2.position.set(0, glassY - glassHeight/2 - 0.15, glassZ);
+  store.add(horizontalFrame2);
+
+  // Door handles
+  const handleMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc0c0c0,
+    metalness: 0.9,
+    roughness: 0.2
+  });
+
+  const handle1 = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 0.8, 16),
+    handleMaterial
+  );
+  handle1.rotation.x = Math.PI / 2;
+  handle1.position.set(-2, 2, glassZ + 0.15);
+  store.add(handle1);
+
+  const handle2 = handle1.clone();
+  handle2.position.set(2, 2, glassZ + 0.15);
+  store.add(handle2);
+
+  // Red "Kipper" sign (main sign) with text
+  const kipperSignTexture = createKipperSignTexture();
+  const kipperSign = new THREE.Mesh(
+    new THREE.BoxGeometry(13, 2.8, 0.35),
+    new THREE.MeshStandardMaterial({ 
+      map: kipperSignTexture,
+      roughness: 0.4,
+      emissive: 0x330000,
+      emissiveIntensity: 0.15
+    })
+  );
+  kipperSign.position.set(0, 5.8, 3.75);
+  kipperSign.castShadow = true;
+  store.add(kipperSign);
+
+  // Add small green checkmark accent
+  const checkMark = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 0.3, 0.1),
+    new THREE.MeshStandardMaterial({ 
+      color: 0x2ecc71,
+      emissive: 0x1a5c3a,
+      emissiveIntensity: 0.3
+    })
+  );
+  checkMark.position.set(3.5, 5.8, 3.95);
+  checkMark.rotation.z = Math.PI / 4;
+  store.add(checkMark);
+
+  // White "Milk" advertisement panels on top with text (removed red circles)
+  const milkTexture = createMilkTexture();
+  const milkPanel1 = new THREE.Mesh(
+    new THREE.BoxGeometry(7, 3.5, 0.2),
+    new THREE.MeshStandardMaterial({ 
+      map: milkTexture,
+      roughness: 0.3
+    })
+  );
+  milkPanel1.position.set(-9, 8.25, 3.65);
+  milkPanel1.castShadow = true;
+  store.add(milkPanel1);
+
+  const milkPanel2 = new THREE.Mesh(
+    new THREE.BoxGeometry(7, 3.5, 0.2),
+    new THREE.MeshStandardMaterial({ 
+      map: milkTexture,
+      roughness: 0.3
+    })
+  );
+  milkPanel2.position.set(9, 8.25, 3.65);
+  milkPanel2.castShadow = true;
+  store.add(milkPanel2);
+
+  // Roof/overhang (dark top edge)
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(31, 0.4, 8),
+    new THREE.MeshStandardMaterial({ 
+      color: 0x0a0a0a,
+      roughness: 0.6,
+      metalness: 0.3
+    })
+  );
+  roof.position.set(0, 9.75, 0);
+  roof.castShadow = true;
+  store.add(roof);
+
+  // Ground level base/foundation - more detailed
+  const foundation = new THREE.Mesh(
+    new THREE.BoxGeometry(30.5, 0.4, 7.5),
+    new THREE.MeshStandardMaterial({ 
+      color: 0x666666,
+      roughness: 0.9
+    })
+  );
+  foundation.position.set(0, 0.2, 0);
+  foundation.receiveShadow = true;
+  store.add(foundation);
+
+  store.position.set(x, 0, z);
+  return store;
+}
+
+// Add buildings
+// Calculate road height at building positions
+const building1X = 40;
+const building1Z = -14; // Moved closer to the road (was -18)
+const normalizedX1 = building1X / 50;
+const bridgeHeight1 = 1.5 * (1 - normalizedX1 * normalizedX1);
+
+const building2X = 18;
+const building2Z = -16; // Moved closer to the road (was -20)
+const normalizedX2 = building2X / 50;
+const bridgeHeight2 = 1.5 * (1 - normalizedX2 * normalizedX2);
+
+// Create elevated ground platforms for buildings
+const platformMaterial = new THREE.MeshStandardMaterial({
+  color: 0xd4e0c8,
+  roughness: 0.9,
+});
+
+// Platform for brick building - adjusted to stay behind the building
+const platform1 = new THREE.Mesh(
+  new THREE.BoxGeometry(14, bridgeHeight1 + 0.5, 6), // Reduced depth from 12 to 6
+  platformMaterial
+);
+platform1.position.set(building1X, (bridgeHeight1 + 0.5) / 2, building1Z - 1); // Moved back slightly
+platform1.receiveShadow = true;
+platform1.castShadow = true;
+world.add(platform1);
+
+// Platform for Kipper store - adjusted to stay behind the building
+const platform2 = new THREE.Mesh(
+  new THREE.BoxGeometry(32, bridgeHeight2 + 0.5, 5), // Reduced depth from 9 to 5
+  platformMaterial
+);
+platform2.position.set(building2X, (bridgeHeight2 + 0.5) / 2, building2Z - 1.5); // Moved back slightly
+platform2.receiveShadow = true;
+platform2.castShadow = true;
+world.add(platform2);
+
+const brickBuilding = makeBuilding(building1X, building1Z, 12, 7, 8);
+brickBuilding.position.y = 0.5 + bridgeHeight1; // Match road height
+world.add(brickBuilding);
+
+const kipperStore = makeKipperStore(building2X, building2Z);
+kipperStore.position.y = 0.5 + bridgeHeight2; // Match road height
+world.add(kipperStore);
 
 /* ---------------- Streetlights ---------------- */
 function makeStreetLight(x, z) {
@@ -703,7 +1303,7 @@ const panelText = document.getElementById("panelText");
 const closeBtn = document.getElementById("closeBtn");
 
 panelText.textContent =
-  "Šarena Džamija is a famous landmark in Tetovo. Click on the 3D model to open this info panel.";
+  "Šarena Džamija (The Painted Mosque) is one of the most beautiful mosques in the Balkans, built in 1438. It features over 30,000 hand-painted decorative elements covering its exterior and interior walls. The mosque's stunning floral and geometric patterns were created using natural dyes and gold leaf. Its name 'Šarena' means 'colorful' or 'painted' in Macedonian. The mosque was renovated in 1833 by Abdurrahman Pasha, who added much of the intricate decoration we see today. It's a masterpiece of Islamic art and a symbol of Tetovo's rich cultural heritage.";
 
 closeBtn.addEventListener("click", () => (panel.style.display = "none"));
 
@@ -739,6 +1339,44 @@ function animate() {
   requestAnimationFrame(animate);
 
   const dt = clock.getDelta();
+
+  // Keyboard camera movement
+  const moveSpeed = keyboard.shift ? 30 : 15; // Faster with shift
+  const verticalSpeed = 10;
+  
+  if (keyboard.w || keyboard.s || keyboard.a || keyboard.d || keyboard.q || keyboard.e || keyboard.space) {
+    const forward = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    
+    // Get camera direction vectors
+    camera.getWorldDirection(forward);
+    forward.y = 0; // Keep movement horizontal
+    forward.normalize();
+    
+    right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+    
+    // Calculate movement
+    const movement = new THREE.Vector3();
+    
+    if (keyboard.w) movement.add(forward.multiplyScalar(moveSpeed * dt));
+    if (keyboard.s) movement.add(forward.multiplyScalar(-moveSpeed * dt));
+    if (keyboard.a) movement.add(right.multiplyScalar(-moveSpeed * dt));
+    if (keyboard.d) movement.add(right.multiplyScalar(moveSpeed * dt));
+    
+    // Vertical movement
+    if (keyboard.space) movement.y += verticalSpeed * dt;
+    if (keyboard.q) movement.y -= verticalSpeed * dt;
+    
+    // Apply movement to both camera and controls target
+    camera.position.add(movement);
+    controls.target.add(movement);
+  }
+  
+  // Reset camera to default view with 'R' key
+  if (keyboard.e) {
+    camera.position.set(20, 55, 35);
+    controls.target.set(20, 0, 24);
+  }
 
   cars.forEach((c) => {
     const dir = c.reverse ? -1 : 1;

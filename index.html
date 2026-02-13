@@ -5,29 +5,100 @@
     <title>Tetovo 3D Street</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
-      body { margin: 0; overflow: hidden; }
+      body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
       canvas { display: block; }
-      /* simple info panel */
+      
+      /* Info panel */
       #panel {
         position: absolute;
         top: 12px;
         right: 12px;
-        width: 320px;
-        background: rgba(10, 12, 16, 0.9);
+        width: 380px;
+        max-height: 90vh;
+        overflow-y: auto;
+        background: rgba(10, 12, 16, 0.92);
         color: white;
-        padding: 12px;
+        padding: 16px;
         border-radius: 12px;
-        font-family: Arial, sans-serif;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+      #panel h2 { 
+        margin: 0 0 10px; 
+        font-size: 20px;
+        color: #5da7d9;
+        border-bottom: 2px solid #5da7d9;
+        padding-bottom: 8px;
+      }
+      #panel p { 
+        margin: 0; 
+        line-height: 1.6; 
+        opacity: 0.95;
+        font-size: 14px;
+      }
+      #closeBtn {
+        margin-top: 12px;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+        background: #5da7d9;
+        color: white;
+        font-weight: bold;
+        transition: background 0.2s;
+      }
+      #closeBtn:hover {
+        background: #4a8fc4;
+      }
+
+      /* Controls panel */
+      #controls {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(10, 12, 16, 0.85);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 13px;
+        max-width: 280px;
+      }
+      #controls h3 {
+        margin: 0 0 8px 0;
+        font-size: 15px;
+        color: #5da7d9;
+      }
+      #controls ul {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 1.6;
+      }
+      #controls li {
+        margin-bottom: 4px;
+      }
+      #controls kbd {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      #toggleControls {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(10, 12, 16, 0.85);
+        color: white;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
         display: none;
       }
-      #panel h2 { margin: 0 0 6px; font-size: 18px; }
-      #panel p { margin: 0; line-height: 1.4; opacity: 0.95; }
-      #closeBtn {
-        margin-top: 10px;
-        padding: 6px 10px;
-        border: 0;
-        border-radius: 10px;
-        cursor: pointer;
+      #toggleControls:hover {
+        background: rgba(20, 22, 26, 0.95);
       }
     </style>
   </head>
@@ -38,6 +109,45 @@
       <button id="closeBtn">Close</button>
     </div>
 
+    <div id="controls">
+      <h3>🎮 Controls</h3>
+      <ul>
+        <li><kbd>W A S D</kbd> - Move camera</li>
+        <li><kbd>Space</kbd> - Move up</li>
+        <li><kbd>Q</kbd> - Move down</li>
+        <li><kbd>Shift</kbd> + movement - Move faster</li>
+        <li><kbd>E</kbd> - Reset camera</li>
+        <li><strong>Mouse drag</strong> - Rotate view</li>
+        <li><strong>Mouse wheel</strong> - Zoom</li>
+        <li><strong>Right click drag</strong> - Pan</li>
+      </ul>
+    </div>
+
+    <button id="toggleControls">Show Controls</button>
+
     <script type="module" src="main.js"></script>
+    <script>
+      // Toggle controls panel
+      const controlsPanel = document.getElementById('controls');
+      const toggleBtn = document.getElementById('toggleControls');
+      let controlsVisible = true;
+
+      setTimeout(() => {
+        controlsPanel.style.display = 'none';
+        toggleBtn.style.display = 'block';
+        controlsVisible = false;
+      }, 8000); // Hide after 8 seconds
+
+      toggleBtn.addEventListener('click', () => {
+        controlsVisible = !controlsVisible;
+        if (controlsVisible) {
+          controlsPanel.style.display = 'block';
+          toggleBtn.style.display = 'none';
+        } else {
+          controlsPanel.style.display = 'none';
+          toggleBtn.style.display = 'block';
+        }
+      });
+    </script>
   </body>
 </html>
