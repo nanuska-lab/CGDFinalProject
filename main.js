@@ -65,6 +65,7 @@ const grassTexture = safeLoadTexture("textures/grass.jpg", { repeatX: 6, repeatY
 const roadTexture = safeLoadTexture("textures/road.jpg", { repeatX: 15, repeatY: 1 });
 const brickTexture = safeLoadTexture("textures/brick.jpg", { repeatX: 2, repeatY: 2 });
 const sidewalkTexture = safeLoadTexture("textures/sidewalk.jpg", { repeatX: 15, repeatY: 1 });
+const facadeTexture = safeLoadTexture("textures/metal.jpg", { repeatX: 2, repeatY: 1 });
 
 /* ---------------- World Group ---------------- */
 const world = new THREE.Group();
@@ -72,7 +73,7 @@ scene.add(world);
 
 /* ---------------- Ground ---------------- */
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(220, 220),
+  new THREE.PlaneGeometry(110, 115),
   new THREE.MeshStandardMaterial({
     color: 0xd4e0c8,
     roughness: 0.9,
@@ -95,7 +96,6 @@ const riverMaterial = new THREE.MeshStandardMaterial({
 const RIVER_LENGTH = 100;
 const RIVER_WIDTH = 9;
 
-// The river now runs along Z-axis (parallel to park)
 const river = new THREE.Mesh(
   new THREE.PlaneGeometry(RIVER_WIDTH, RIVER_LENGTH),
   riverMaterial
@@ -103,10 +103,7 @@ const river = new THREE.Mesh(
 river.rotation.x = -Math.PI / 2;
 river.position.set(-4, 0.01, 7); 
 river.receiveShadow = true;
-
-// Optional tiny shrink so it never visually clips the banks
 river.scale.x = (RIVER_WIDTH - 0.2) / RIVER_WIDTH;
-
 world.add(river);
 
 /* ---------------- River Banks (FIXED) ---------------- */
@@ -115,7 +112,7 @@ const bankMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.9,
 });
 
-const BANK_THICKNESS = 1.0; // thickness in X now
+const BANK_THICKNESS = 1.0; 
 const BANK_HEIGHT = 0.6;
 const bankOffsetX = (RIVER_WIDTH / 2) + (BANK_THICKNESS / 2);
 
@@ -138,7 +135,51 @@ const riverBankRight = riverBankLeft.clone();
 riverBankRight.position.x = river.position.x + bankOffsetX;
 world.add(riverBankRight);
 
-// Keep river animation data simple
+/* ---------------- Stairs (River -> Park) ---------------- */
+function makeStairs({
+  x = 3.5,
+  z = 24,
+  steps = 7,          
+  stepW = 6,
+  stepH = 0.2,
+  stepD = 1.0,
+  dirZ = 1,
+} = {}) {
+  const g = new THREE.Group();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x8a8a8a,
+    map: sidewalkTexture,
+    roughness: 0.9,
+  });
+
+  for (let i = 0; i < steps; i++) {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(stepW, stepH, stepD), mat);
+    s.castShadow = true;
+    s.receiveShadow = true;
+
+    s.position.set(
+      0,
+      stepH / 2 + i * stepH,
+      dirZ * (i * stepD)
+    );
+
+    g.add(s);
+  }
+  g.position.set(5, 0, z);
+  g.rotation.y = Math.PI; 
+  return g;
+}
+
+world.add(
+  makeStairs({
+    x: river.position.x + (RIVER_WIDTH / 2) + 1.0,
+    z: 20.3,
+    steps: 7,
+    dirZ: 1,
+  })
+);
+
 const riverData = { mesh: river, time: 0 };
 /* ---------------- Curved Bridge Road ---------------- */
 const roadSegments = 60;
@@ -267,9 +308,10 @@ pillarPositions.forEach((xPos) => {
 
 /* ---------------- Buildings ---------------- */
 const brickMaterial = new THREE.MeshStandardMaterial({ map: brickTexture, roughness: 0.95 });
+const facadeMaterial = new THREE.MeshStandardMaterial({ map: facadeTexture, roughness: 0.9,});
 
-function makeBuilding(x, z, w, h, d) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), brickMaterial);
+function makeBuilding(x, z, w, h, d, material = brickMaterial) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
   mesh.position.set(x, h / 2, z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -277,7 +319,7 @@ function makeBuilding(x, z, w, h, d) {
 }
 
 world.add(makeBuilding(40, -18, 12, 7, 8));
-world.add(makeBuilding(18, -20, 30, 9, 7));
+world.add(makeBuilding(18, -20, 30, 9, 7, facadeMaterial));
 
 /* ---------------- Streetlights ---------------- */
 function makeStreetLight(x, z) {
@@ -569,6 +611,44 @@ gltfLoader.load(
   undefined,
   (err) => console.error("Error loading Sarena.glb:", err)
 );
+
+/* ---------------- Bus Stop GLTF ---------------- */
+function loadGLTF(url) {
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(url, (g) => resolve(g.scene), undefined, reject);
+  });
+}
+
+(async () => {
+  try {
+    const busStop = await loadGLTF("assets/standard_bus_stop/scene.gltf");
+
+    busStop.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+      }
+    });
+
+    const box = new THREE.Box3().setFromObject(busStop);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+
+    const targetWidth = 6;
+    const sx = Math.max(size.x, 0.0001);
+    busStop.scale.setScalar(targetWidth / sx);
+
+    const box2 = new THREE.Box3().setFromObject(busStop);
+    const minY = box2.min.y;
+
+    busStop.position.set(-6, -minY + 2.0, 9);
+    busStop.rotation.y = Math.PI; 
+
+    world.add(busStop);
+  } catch (e) {
+    console.error("Error loading bus stop:", e);
+  }
+})();
 
 /* ---------------- Cars ---------------- */
 function makeCar(color = 0xd94b4b) {
