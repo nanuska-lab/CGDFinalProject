@@ -29,6 +29,8 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
+
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
@@ -585,65 +587,65 @@ parkGround.receiveShadow = true;
 world.add(parkGround);
 
 /* ============ Landmark (Mosque) ============ */
+/* ============ Landmark (Mosque) ============ */
 const gltfLoader = new GLTFLoader();
 let landmark = null;
 
-gltfLoader.load("assets/Sarena.glb", (gltf) => {
+gltfLoader.load("assets/sharena.glb", (gltf) => {
   landmark = gltf.scene;
   landmark.name = "LANDMARK_CLICKABLE";
   
-  const toRemove = [];
-  landmark.traverse((obj) => {
-    if (!obj.isMesh) return;
-    const box = new THREE.Box3().setFromObject(obj);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    
-    const isThin = size.y < 0.5;
-    const isLarge = size.x > 3 || size.z > 3;
-    const hasExtremeAspect = (size.x / Math.max(size.y, 0.0001) > 20) || (size.z / Math.max(size.y, 0.0001) > 20);
-    const hasPlanelikeName = obj.name && (obj.name.toLowerCase().includes("plane") || 
-      obj.name.toLowerCase().includes("ground") || obj.name.toLowerCase().includes("base") || 
-      obj.name.toLowerCase().includes("floor"));
-    
-    let isWhite = false;
-    if (obj.material) {
-      const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
-      if (mat.color) {
-        const c = mat.color;
-        isWhite = c.r > 0.6 && c.g > 0.6 && c.b > 0.6 && size.x < 3 && size.y < 3 && size.z < 3;
-      }
-    }
-    
-    const isTiny = size.x < 2 && size.y < 2 && size.z < 2;
-    
-    if ((isThin && isLarge) || hasExtremeAspect || hasPlanelikeName || isWhite || isTiny) {
-      toRemove.push(obj);
-    }
-  });
-  
-  toRemove.forEach(m => m.parent && m.parent.remove(m));
-  
-  landmark.traverse((obj) => {
-    if (obj.isMesh) {
-      obj.castShadow = true;
-      obj.receiveShadow = true;
-    }
-  });
-  
+  // First scale the model
   const box = new THREE.Box3().setFromObject(landmark);
   const size = new THREE.Vector3();
   box.getSize(size);
   const scale = 26 / Math.max(size.y, 0.0001);
   landmark.scale.setScalar(scale);
   
+  // NOW filter after scaling - with better logic
+  const toRemove = [];
+  landmark.traverse((obj) => {
+    if (!obj.isMesh) return;
+    
+    const meshBox = new THREE.Box3().setFromObject(obj);
+    const meshSize = new THREE.Vector3();
+    meshBox.getSize(meshSize);
+    
+    // Only remove obvious ground planes
+    const isGroundPlane = meshSize.y < 0.1 && (meshSize.x > 10 || meshSize.z > 10);
+    const hasGroundName = obj.name && (
+      obj.name.toLowerCase().includes("plane") || 
+      obj.name.toLowerCase().includes("ground") || 
+      obj.name.toLowerCase().includes("floor")
+    );
+    
+    if (isGroundPlane || hasGroundName) {
+      toRemove.push(obj);
+    }
+  });
+  
+  toRemove.forEach(m => m.parent && m.parent.remove(m));
+  
+  // Enable shadows
+  landmark.traverse((obj) => {
+    if (obj.isMesh) {
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+      
+      // Fix materials
+      if (obj.material) {
+        obj.material.needsUpdate = true;
+      }
+    }
+  });
+  
+  // Position after everything
   const box2 = new THREE.Box3().setFromObject(landmark);
-  landmark.position.set(-7, -box2.min.y, 1);
+  landmark.position.set(-7, 0, 1);
   landmark.rotation.y = Math.PI / 1.25;
   
   world.add(landmark);
 });
-
 /* ============ Bus Stop ============ */
 gltfLoader.load("assets/standard_bus_stop/scene.gltf", (gltf) => {
   const busStop = gltf.scene;
