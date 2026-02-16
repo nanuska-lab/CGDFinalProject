@@ -91,8 +91,9 @@ const addGround = (w, d, x, z) => {
   world.add(mesh);
 };
 addGround(100, 30, 0, 0);
-addGround(50, 35, 26, 28);
+addGround(48, 30, 26, 28);
 addGround(40, 20, 25, -18);
+addGround(39, 31, -18, 30);
 
 /* ============ River ============ */
 const river = new THREE.Mesh(
@@ -105,14 +106,14 @@ river.receiveShadow = true;
 river.scale.x = 0.978;
 world.add(river);
 
-const bankMat = new THREE.MeshStandardMaterial({ color: 0x6b5d4f, roughness: 0.9 });
-[-1, 1].forEach(dir => {
-  const bank = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 100), bankMat);
-  bank.position.set(-4 + dir * 5, 0.2, 7);
-  bank.castShadow = true;
-  bank.receiveShadow = true;
-  world.add(bank);
-});
+  const bankMat = new THREE.MeshStandardMaterial({ color: 0x6b5d4f, roughness: 0.9 });
+  [-1, 1].forEach(dir => {
+    const bank = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 100), bankMat);
+    bank.position.set(-4 + dir * 5, 0.2, 7);
+    bank.castShadow = true;
+    bank.receiveShadow = true;
+    world.add(bank);
+  });
 
 /* ============ Stairs ============ */
 const stairs = new THREE.Group();
@@ -124,7 +125,7 @@ for (let i = 0; i < 7; i++) {
   step.receiveShadow = true;
   stairs.add(step);
 }
-stairs.position.set(5, 0, 20.3);
+stairs.position.set(5.5, 0, 20.3);
 stairs.rotation.y = 0;
 
 world.add(stairs);
@@ -304,9 +305,9 @@ function makeKipperStore(x, z) {
   });
   
   const hFrameTop = new THREE.Mesh(new THREE.BoxGeometry(30.5, 0.3, 0.25), frameMat);
-hFrameTop.position.set(0, 3.7, 3.6); // top bar only
-hFrameTop.castShadow = true;
-store.add(hFrameTop);
+  hFrameTop.position.set(0, 3.7, 3.6); // top bar only
+  hFrameTop.castShadow = true;
+  store.add(hFrameTop);
 
   
   [-2, 2].forEach(xPos => {
@@ -418,8 +419,6 @@ function makeGrillShop(x, z, w, h, d) {
   sign.position.set(0, h + 0.5, d / 2 - 0.5);
   sign.castShadow = true;
   building.add(sign);
-  
-
   
   building.position.set(x, 0, z);
   return building;
@@ -578,7 +577,7 @@ benches.forEach(([x, z, rot]) => world.add(makeBench(x, z, rot)));
 
 /* ============ Park Ground ============ */
 const parkGround = new THREE.Mesh(
-  new THREE.PlaneGeometry(50, 30),
+  new THREE.PlaneGeometry(49, 32),
   new THREE.MeshStandardMaterial({ color: 0x4a8f3a, map: textures.grass, roughness: 0.95 })
 );
 parkGround.rotation.x = -Math.PI / 2;
@@ -586,7 +585,6 @@ parkGround.position.set(26, 0.01, 30);
 parkGround.receiveShadow = true;
 world.add(parkGround);
 
-/* ============ Landmark (Mosque) ============ */
 /* ============ Landmark (Mosque) ============ */
 const gltfLoader = new GLTFLoader();
 let landmark = null;
@@ -641,11 +639,55 @@ gltfLoader.load("assets/sharena.glb", (gltf) => {
   
   // Position after everything
   const box2 = new THREE.Box3().setFromObject(landmark);
-  landmark.position.set(-7, 0, 1);
+  landmark.position.set(-5, 0, 1);
   landmark.rotation.y = Math.PI / 1.25;
   
   world.add(landmark);
 });
+
+/* ============ Hamam ============ */
+function loadHamam(path, position, rotationY = 0, targetHeight = 12) {
+  gltfLoader.load(path, (gltf) => {
+    const hamam = gltf.scene;
+
+    // Enable shadows
+    hamam.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        if (obj.material) obj.material.needsUpdate = true;
+      }
+    });
+
+    // Scale based on height
+    const box = new THREE.Box3().setFromObject(hamam);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+
+    const scale = targetHeight / Math.max(size.y, 0.0001);
+    hamam.scale.setScalar(scale);
+
+    // Align to ground properly
+    const box2 = new THREE.Box3().setFromObject(hamam);
+    hamam.position.set(
+      position.x,
+      position.y - box2.min.y,
+      position.z
+    );
+
+    hamam.rotation.y = rotationY;
+
+    world.add(hamam);
+  });
+}
+
+loadHamam(
+  "assets/hamam.glb",
+  new THREE.Vector3(-20, -1.2, 33),  
+  Math.PI / 1.25,                 
+  10                        
+);
+
 /* ============ Bus Stop ============ */
 gltfLoader.load("assets/standard_bus_stop/scene.gltf", (gltf) => {
   const busStop = gltf.scene;
@@ -662,7 +704,7 @@ gltfLoader.load("assets/standard_bus_stop/scene.gltf", (gltf) => {
   busStop.scale.setScalar(6 / Math.max(size.x, 0.0001));
   
   const box2 = new THREE.Box3().setFromObject(busStop);
-  busStop.position.set(-18, -box2.min.y + 2, 12);
+  busStop.position.set(-6, -box2.min.y + 2, 10);
   busStop.rotation.y = Math.PI;
   world.add(busStop);
 });
